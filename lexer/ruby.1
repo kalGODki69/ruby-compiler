@@ -1,0 +1,158 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int  lineno = 1;
+char string_buf[1024];
+int  string_len = 0;
+
+void append_char(char c) {
+    if (string_len < 1023)
+        string_buf[string_len++] = c;
+}
+void reset_buf(void) {
+    string_len = 0;
+}
+%}
+
+%option noyywrap
+
+%x DQSTRING
+%x COMMENT
+
+DIGIT       [0-9]
+INTEGER     {DIGIT}+
+FLOAT       {DIGIT}+"."{DIGIT}+
+ID          [a-zA-Z_][a-zA-Z_0-9]*
+
+%%
+
+{INTEGER}       { printf("INT: %d\n", atoi(yytext)); }
+{FLOAT}         { printf("FLOAT: %f\n", atof(yytext)); }
+
+"if"            { printf("KW_IF\n"); }
+"elsif"         { printf("KW_ELSIF\n"); }
+"else"          { printf("KW_ELSE\n"); }
+"end"           { printf("KW_END\n"); }
+"unless"        { printf("KW_UNLESS\n"); }
+"while"         { printf("KW_WHILE\n"); }
+"until"         { printf("KW_UNTIL\n"); }
+"for"           { printf("KW_FOR\n"); }
+"in"            { printf("KW_IN\n"); }
+"do"            { printf("KW_DO\n"); }
+"def"           { printf("KW_DEF\n"); }
+"class"         { printf("KW_CLASS\n"); }
+"module"        { printf("KW_MODULE\n"); }
+"return"        { printf("KW_RETURN\n"); }
+"yield"         { printf("KW_YIELD\n"); }
+"break"         { printf("KW_BREAK\n"); }
+"next"          { printf("KW_NEXT\n"); }
+"true"          { printf("KW_TRUE\n"); }
+"false"         { printf("KW_FALSE\n"); }
+"nil"           { printf("KW_NIL\n"); }
+"self"          { printf("KW_SELF\n"); }
+"super"         { printf("KW_SUPER\n"); }
+"and"           { printf("KW_AND\n"); }
+"or"            { printf("KW_OR\n"); }
+"not"           { printf("KW_NOT\n"); }
+"begin"         { printf("KW_BEGIN\n"); }
+"rescue"        { printf("KW_RESCUE\n"); }
+"ensure"        { printf("KW_ENSURE\n"); }
+"raise"         { printf("KW_RAISE\n"); }
+"case"          { printf("KW_CASE\n"); }
+"when"          { printf("KW_WHEN\n"); }
+"then"          { printf("KW_THEN\n"); }
+
+{ID}            { printf("ID: %s\n", yytext); }
+
+"==="           { printf("OP_CASE_EQ\n"); }
+"<=>"           { printf("OP_CMP\n"); }
+"=="            { printf("OP_EQ\n"); }
+"!="            { printf("OP_NEQ\n"); }
+"<="            { printf("OP_LE\n"); }
+">="            { printf("OP_GE\n"); }
+"**"            { printf("OP_POW\n"); }
+"+="            { printf("OP_PLUS_ASSIGN\n"); }
+"-="            { printf("OP_MINUS_ASSIGN\n"); }
+"*="            { printf("OP_MUL_ASSIGN\n"); }
+"/="            { printf("OP_DIV_ASSIGN\n"); }
+"<<"            { printf("OP_LSHIFT\n"); }
+">>"            { printf("OP_RSHIFT\n"); }
+"&&"            { printf("OP_AND\n"); }
+"||"            { printf("OP_OR\n"); }
+"..."           { printf("OP_RANGE_EXC\n"); }
+".."            { printf("OP_RANGE_INC\n"); }
+"::"            { printf("OP_SCOPE\n"); }
+"<"             { printf("OP_LT\n"); }
+">"             { printf("OP_GT\n"); }
+"="             { printf("OP_ASSIGN\n"); }
+"+"             { printf("OP_PLUS\n"); }
+"-"             { printf("OP_MINUS\n"); }
+"*"             { printf("OP_STAR\n"); }
+"/"             { printf("OP_SLASH\n"); }
+"%"             { printf("OP_MOD\n"); }
+"!"             { printf("OP_NOT\n"); }
+"&"             { printf("OP_BITAND\n"); }
+"|"             { printf("OP_BITOR\n"); }
+"^"             { printf("OP_BITXOR\n"); }
+"~"             { printf("OP_BITNOT\n"); }
+"."             { printf("OP_DOT\n"); }
+"?"             { printf("OP_QUESTION\n"); }
+":"             { printf("OP_COLON\n"); }
+";"             { printf("OP_SEMICOLON\n"); }
+","             { printf("OP_COMMA\n"); }
+"("             { printf("OP_LPAREN\n"); }
+")"             { printf("OP_RPAREN\n"); }
+"["             { printf("OP_LBRACKET\n"); }
+"]"             { printf("OP_RBRACKET\n"); }
+"{"             { printf("OP_LBRACE\n"); }
+"}"             { printf("OP_RBRACE\n"); }
+
+\"              { reset_buf(); BEGIN(DQSTRING); }
+
+<DQSTRING>\\n   { append_char('\n'); }
+<DQSTRING>\\t   { append_char('\t'); }
+<DQSTRING>\\r   { append_char('\r'); }
+<DQSTRING>\\b   { append_char('\b'); }
+<DQSTRING>\\f   { append_char('\f'); }
+<DQSTRING>\\\"  { append_char('"'); }
+<DQSTRING>\\\\  { append_char('\\'); }
+
+<DQSTRING>\"    {
+    string_buf[string_len] = '\0';
+    printf("STRING: \"%s\"\n", string_buf);
+    BEGIN(INITIAL);
+}
+
+<DQSTRING>\n    {
+    string_buf[string_len] = '\0';
+    printf("STRING: \"%s\"\n", string_buf);
+    lineno++;
+    BEGIN(INITIAL);
+}
+
+<DQSTRING>.     { append_char(yytext[0]); }
+
+"#"             { BEGIN(COMMENT); }
+<COMMENT>\n     { BEGIN(INITIAL); lineno++; }
+<COMMENT>.      { }
+
+\n              { lineno++; }
+[ \t]+          { }
+.               { printf("UNKNOWN: %s\n", yytext); }
+
+%%
+
+int main(int argc, char **argv) {
+    if (argc > 1) {
+        yyin = fopen(argv[1], "r");
+        if (!yyin) {
+            perror(argv[1]);
+            return 1;
+        }
+    }
+    yylex();
+    if (yyin) fclose(yyin);
+    return 0;
+}

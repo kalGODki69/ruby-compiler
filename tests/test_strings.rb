@@ -1,0 +1,9 @@
+a = "hello\nworld"
+b = "tab\there"
+c = "quote\"inside"
+d = "back\\slash"
+e = "cr\rlf"
+f = 'no\nescape'
+g = 'single\'quote'
+h = ""
+i = ''
