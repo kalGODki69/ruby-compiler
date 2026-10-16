@@ -1,50 +1,35 @@
 #ifndef TREE_NODES_H
 #define TREE_NODES_H
 
+#include <stdio.h>
+
 // NODE TYPES
 typedef enum {
-    // Literals
     N_INT, N_FLOAT, N_STRING, N_STRING_SQ, N_SYMBOL,
     N_TRUE, N_FALSE, N_NIL, N_SELF,
-
-    // Identifiers
     N_ID, N_IVAR, N_CVAR, N_GVAR, N_CONSTANT,
-
-    // Expressions
     N_BINOP, N_UNOP, N_TERNARY, N_ASSIGN, N_RANGE,
-
-    // Collections
     N_ARRAY, N_HASH, N_HASH_PAIR, N_INDEX,
-
-    // Calls and blocks
     N_CALL, N_ARG_LIST, N_BLOCK, N_BLOCK_PARAMS,
-
-    // Program and statements
     N_STMT_LIST, N_RETURN, N_BREAK, N_NEXT, N_PRINT,
-
-    // Control flow
     N_IF, N_ELSIF, N_UNLESS, N_WHILE, N_UNTIL, N_FOR,
-
-    // Definitions
     N_DEF, N_PARAM_LIST, N_CLASS, N_MODULE,
-
-    // Begin / rescue
     N_BEGIN_RESCUE
 } NodeType;
 
-// OPERATOR CODES
+// OPERATOR CODES (prefixed to avoid clash with Bison tokens)
 typedef enum {
-    OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_POW,
-    OP_EQ, OP_NEQ, OP_LT, OP_GT, OP_LE, OP_GE,
-    OP_CMP, OP_CASE_EQ,
-    OP_AND, OP_OR,
-    OP_KW_AND, OP_KW_OR,
-    OP_LSHIFT, OP_RSHIFT,
-    OP_BITAND, OP_BITOR, OP_BITXOR,
-    OP_NOT, OP_KW_NOT,
-    OP_NEG, OP_POS,
-    OP_PLUS_ASSIGN, OP_MINUS_ASSIGN,
-    OP_MUL_ASSIGN, OP_DIV_ASSIGN
+    OPC_ADD, OPC_SUB, OPC_MUL, OPC_DIV, OPC_MOD, OPC_POW,
+    OPC_EQ, OPC_NEQ, OPC_LT, OPC_GT, OPC_LE, OPC_GE,
+    OPC_CMP, OPC_CASE_EQ,
+    OPC_AND, OPC_OR,
+    OPC_KW_AND, OPC_KW_OR,
+    OPC_LSHIFT, OPC_RSHIFT,
+    OPC_BITAND, OPC_BITOR, OPC_BITXOR,
+    OPC_NOT, OPC_KW_NOT,
+    OPC_NEG, OPC_POS,
+    OPC_PLUS_ASSIGN, OPC_MINUS_ASSIGN,
+    OPC_MUL_ASSIGN, OPC_DIV_ASSIGN
 } OpCode;
 
 // PRINT KINDS
@@ -52,7 +37,7 @@ typedef enum {
     PRINT_PUTS, PRINT_PRINT, PRINT_P
 } PrintKind;
 
-// BASE NODE - every concrete node starts with this
+// BASE NODE
 typedef struct Node {
     NodeType type;
     int      line;
@@ -173,7 +158,7 @@ typedef struct {
     int    count;
 } NBlockParams;
 
-// PROGRAM AND STATEMENTS
+// STATEMENTS
 typedef struct {
     Node   base;
     Node **stmts;
@@ -268,12 +253,53 @@ typedef struct {
     Node *ensure_body;
 } NBeginRescue;
 
-// YYSTYPE - union for Bison semantic values
-union YYSTYPE {
-    int          intval;
-    double       floatval;
-    char        *strval;
-    struct Node *node;
-};
+// PROTOYPES OF CREATOR FUNCTIONS
+Node *create_int(int value);
+Node *create_float(double value);
+Node *create_string(char *value);
+Node *create_string_sq(char *value);
+Node *create_symbol(char *value);
+Node *create_bool(int value);
+Node *create_nil(void);
+Node *create_self(void);
+Node *create_id(char *name);
+Node *create_ivar(char *name);
+Node *create_cvar(char *name);
+Node *create_gvar(char *name);
+Node *create_constant(char *name);
+Node *create_binop(OpCode op, Node *lhs, Node *rhs);
+Node *create_unop(OpCode op, Node *operand);
+Node *create_ternary(Node *cond, Node *then_e, Node *else_e);
+Node *create_assign(OpCode op, Node *target, Node *value);
+Node *create_range(int inclusive, Node *from, Node *to);
+Node *create_array(Node **items, int count);
+Node *create_hash(Node **pairs, int count);
+Node *create_hash_pair(Node *key, Node *value);
+Node *create_index(Node *object, Node *index);
+Node *create_call(Node *receiver, char *method, Node *args, Node *block, int scope_op);
+Node *create_arg_list(Node *first);
+Node *create_arg_list_append(Node *list, Node *item);
+Node *create_block(Node *params, Node *body, int braces);
+Node *create_block_params_single(char *name);
+Node *create_block_params_empty(void);
+Node *create_stmt_list_single(Node *stmt);
+Node *create_stmt_list_append(Node *list, Node *stmt);
+Node *create_stmt_list_empty(void);
+Node *create_return(Node *value);
+Node *create_break(void);
+Node *create_next(void);
+Node *create_print(int kind, Node *expr);
+Node *create_if(Node *cond, Node *body, Node *elsifs, Node *else_body);
+Node *create_elsif_single(Node *cond, Node *body);
+Node *create_unless(Node *cond, Node *body, Node *else_body);
+Node *create_while(Node *cond, Node *body);
+Node *create_until(Node *cond, Node *body);
+Node *create_for(char *var, Node *iterable, Node *body);
+Node *create_def(char *name, Node *params, Node *body);
+Node *create_param_list_single(char *name);
+Node *create_param_list_append(Node *list, char *name);
+Node *create_class(char *name, char *parent, Node *body);
+Node *create_module(char *name, Node *body);
+Node *create_begin_rescue(Node *body, Node *rescue_body, Node *ensure_body);
 
-#endif // TREE_NODES_H
+#endif
