@@ -41,6 +41,7 @@ int cur_col  = 1;
 
 
 %x DQSTRING
+%x SQSTRING
 %x COMMENT
 
 
@@ -52,10 +53,8 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 %%
 
 
-
 {INTEGER}       { yylval.intval = atoi(yytext); return INT; }
 {FLOAT}         { yylval.floatval = atof(yytext); return FLOAT; }
-
 
 
 "if"            { return KW_IF; }
@@ -95,9 +94,7 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 "p"             { return KW_P; }
 
 
-
 {ID}            { yylval.strval = copy_string(yytext); return ID; }
-
 
 
 "==="           { return OP_CASE_EQ; }
@@ -118,6 +115,7 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 "..."           { return OP_RANGE_EXC; }
 ".."            { return OP_RANGE_INC; }
 "::"            { return OP_SCOPE; }
+"=>"            { return OP_HASH_ROCKET; }
 "<"             { return '<'; }
 ">"             { return '>'; }
 "="             { return '='; }
@@ -161,7 +159,6 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 }
 
 <DQSTRING>\n    {
-    /* Незакрытая строка — ошибка, но не зависаем */
     string_buf[string_len] = '\0';
     yylval.strval = copy_string(string_buf);
     BEGIN(INITIAL);
@@ -170,13 +167,32 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 
 <DQSTRING>.     { append_char(yytext[0]); }
 
+\'              { reset_buf(); BEGIN(SQSTRING); }
+<SQSTRING>\\\\  { append_char('\\'); }
+<SQSTRING>\\\'  { append_char('\''); }
+
+<SQSTRING>\'    {
+    string_buf[string_len] = '\0';
+    yylval.strval = copy_string(string_buf);
+    BEGIN(INITIAL);
+    return STRING_SQ;
+}
+
+<SQSTRING>\n    {
+    string_buf[string_len] = '\0';
+    yylval.strval = copy_string(string_buf);
+    BEGIN(INITIAL);
+    return STRING_SQ;
+}
+
+<SQSTRING>.     { append_char(yytext[0]); }
+
 "#"             { BEGIN(COMMENT); }
 <COMMENT>\n     { BEGIN(INITIAL); }
 <COMMENT>.      { }
 
 
-[ \t\n]+        { /* пропускаем */ }
-
+[ \t\n]+        { }
 
 
 .               { return YYUNDEF; }
