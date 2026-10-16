@@ -1,0 +1,20 @@
+# Сгенерированные файлы
+*.tab.c
+*.tab.h
+lex.yy.c
+*.output
+
+# Скомпилированные
+*.exe
+*.o
+*.obj
+
+# Временные
+*.bak
+*~
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
