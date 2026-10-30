@@ -179,7 +179,8 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 <COMMENT>\n     { BEGIN(INITIAL); }
 <COMMENT>.      { }
 
-[ \t\n]+        { }
+[ \t]+          { }
+\n              { return ENDL; }
 
 .               { return YYUNDEF; }
 

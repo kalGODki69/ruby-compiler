@@ -16,9 +16,9 @@ Node *g_root = NULL;
 %locations
 %define parse.error verbose
 %defines
-%expect 67
+%expect 34
 
-// YYSTYPE - union of all semantic value types
+// YYSTYPE
 %union {
     int          intval;
     double       floatval;
@@ -34,15 +34,16 @@ Node *g_root = NULL;
 %token KW_DEF KW_CLASS KW_MODULE
 %token KW_RETURN KW_YIELD
 %token KW_BREAK KW_NEXT
-%token <intval> BOOL
 %token KW_NIL
 %token KW_SELF KW_SUPER
 %token KW_AND KW_OR KW_NOT
 %token KW_BEGIN KW_RESCUE KW_ENSURE KW_RAISE
 %token KW_CASE KW_WHEN KW_THEN
+%token ENDL
 
 // TERMINALS: LITERALS
 %token <intval>   INT
+%token <intval>   BOOL
 %token <floatval> FLOAT
 %token <strval>   STRING
 %token <strval>   SYMBOL
@@ -53,25 +54,10 @@ Node *g_root = NULL;
 %token <strval>   CONSTANT
 
 // TERMINALS: COMPOUND OPERATORS
-%token OP_CASE_EQ
-%token OP_CMP
-%token OP_EQ
-%token OP_NEQ
-%token OP_LE
-%token OP_GE
-%token OP_POW
-%token OP_PLUS_ASSIGN
-%token OP_MINUS_ASSIGN
-%token OP_MUL_ASSIGN
-%token OP_DIV_ASSIGN
-%token OP_LSHIFT
-%token OP_RSHIFT
-%token OP_AND
-%token OP_OR
-%token OP_RANGE_INC
-%token OP_RANGE_EXC
-%token OP_SCOPE
-%token OP_HASH_ROCKET
+%token OP_CASE_EQ OP_CMP OP_EQ OP_NEQ OP_LE OP_GE OP_POW
+%token OP_PLUS_ASSIGN OP_MINUS_ASSIGN OP_MUL_ASSIGN OP_DIV_ASSIGN
+%token OP_LSHIFT OP_RSHIFT OP_AND OP_OR
+%token OP_RANGE_INC OP_RANGE_EXC OP_SCOPE OP_HASH_ROCKET
 
 // PRECEDENCE
 %right '=' OP_PLUS_ASSIGN OP_MINUS_ASSIGN OP_MUL_ASSIGN OP_DIV_ASSIGN
@@ -117,8 +103,10 @@ program
 
 // STATEMENTS
 stmt_list
-    :                               { $$ = create_stmt_list_empty(); }
-    | stmt_list stmt                { $$ = create_stmt_list_append($1, $2); }
+    : /* empty */                   { $$ = create_stmt_list_empty(); }
+    | stmt                          { $$ = create_stmt_list_single($1); }
+    | stmt_list ENDL stmt           { $$ = create_stmt_list_append($1, $3); }
+    | stmt_list ENDL                { $$ = $1; }  /* <-- съедаем ENDL в конце */
     ;
 
 stmt
@@ -139,57 +127,57 @@ stmt
 
 // IF
 if_stmt
-    : KW_IF expr stmt_list KW_END
-        { $$ = create_if($2, $3, NULL, NULL); }
-    | KW_IF expr stmt_list KW_ELSE stmt_list KW_END
-        { $$ = create_if($2, $3, NULL, $5); }
-    | KW_IF expr stmt_list elsif_list KW_END
-        { $$ = create_if($2, $3, $4, NULL); }
-    | KW_IF expr stmt_list elsif_list KW_ELSE stmt_list KW_END
-        { $$ = create_if($2, $3, $4, $6); }
+    : KW_IF expr ENDL stmt_list KW_END
+        { $$ = create_if($2, $4, NULL, NULL); }
+    | KW_IF expr ENDL stmt_list KW_ELSE ENDL stmt_list KW_END
+        { $$ = create_if($2, $4, NULL, $7); }
+    | KW_IF expr ENDL stmt_list elsif_list KW_END
+        { $$ = create_if($2, $4, $5, NULL); }
+    | KW_IF expr ENDL stmt_list elsif_list KW_ELSE ENDL stmt_list KW_END
+        { $$ = create_if($2, $4, $5, $8); }
     ;
 
 elsif_list
-    : KW_ELSIF expr stmt_list
-        { $$ = create_elsif_single($2, $3); }
-    | elsif_list KW_ELSIF expr stmt_list
+    : KW_ELSIF expr ENDL stmt_list
+        { $$ = create_elsif_single($2, $4); }
+    | elsif_list KW_ELSIF expr ENDL stmt_list
         { $$ = $1; }
     ;
 
 // UNLESS
 unless_stmt
-    : KW_UNLESS expr stmt_list KW_END
-        { $$ = create_unless($2, $3, NULL); }
-    | KW_UNLESS expr stmt_list KW_ELSE stmt_list KW_END
-        { $$ = create_unless($2, $3, $5); }
+    : KW_UNLESS expr ENDL stmt_list KW_END
+        { $$ = create_unless($2, $4, NULL); }
+    | KW_UNLESS expr ENDL stmt_list KW_ELSE ENDL stmt_list KW_END
+        { $$ = create_unless($2, $4, $7); }
     ;
 
 // WHILE
 while_stmt
-    : KW_WHILE expr stmt_list KW_END
-        { $$ = create_while($2, $3); }
+    : KW_WHILE expr ENDL stmt_list KW_END
+        { $$ = create_while($2, $4); }
     ;
 
 // UNTIL
 until_stmt
-    : KW_UNTIL expr stmt_list KW_END
-        { $$ = create_until($2, $3); }
+    : KW_UNTIL expr ENDL stmt_list KW_END
+        { $$ = create_until($2, $4); }
     ;
 
 // FOR
 for_stmt
-    : KW_FOR ID KW_IN expr stmt_list KW_END
-        { $$ = create_for($2, $4, $5); }
+    : KW_FOR ID KW_IN expr ENDL stmt_list KW_END
+        { $$ = create_for($2, $4, $6); }
     ;
 
 // DEF
 def_stmt
-    : KW_DEF ID '(' param_list ')' stmt_list KW_END
-        { $$ = create_def($2, $4, $6); }
-    | KW_DEF ID '(' ')' stmt_list KW_END
-        { $$ = create_def($2, NULL, $5); }
-    | KW_DEF ID stmt_list KW_END
-        { $$ = create_def($2, NULL, $3); }
+    : KW_DEF ID '(' param_list ')' ENDL stmt_list KW_END
+        { $$ = create_def($2, $4, $7); }
+    | KW_DEF ID '(' ')' ENDL stmt_list KW_END
+        { $$ = create_def($2, NULL, $6); }
+    | KW_DEF ID ENDL stmt_list KW_END
+        { $$ = create_def($2, NULL, $4); }
     ;
 
 param_list
@@ -199,30 +187,29 @@ param_list
 
 // CLASS
 class_stmt
-    : KW_CLASS CONSTANT stmt_list KW_END
-        { $$ = create_class($2, NULL, $3); }
-    | KW_CLASS CONSTANT '<' CONSTANT stmt_list KW_END
-        { $$ = create_class($2, $4, $5); }
+    : KW_CLASS CONSTANT ENDL stmt_list KW_END
+        { $$ = create_class($2, NULL, $4); }
+    | KW_CLASS CONSTANT '<' CONSTANT ENDL stmt_list KW_END
+        { $$ = create_class($2, $4, $6); }
     ;
 
 // MODULE
 module_stmt
-    : KW_MODULE CONSTANT stmt_list KW_END
-        { $$ = create_module($2, $3); }
+    : KW_MODULE CONSTANT ENDL stmt_list KW_END
+        { $$ = create_module($2, $4); }
     ;
 
 // BEGIN
 begin_rescue
-    : KW_BEGIN stmt_list KW_END
-        { $$ = create_begin_rescue($2, NULL, NULL); }
-    | KW_BEGIN stmt_list KW_RESCUE stmt_list KW_END
-        { $$ = create_begin_rescue($2, $4, NULL); }
-    | KW_BEGIN stmt_list KW_RESCUE stmt_list KW_ENSURE stmt_list KW_END
-        { $$ = create_begin_rescue($2, $4, $6); }
-    | KW_BEGIN stmt_list KW_ENSURE stmt_list KW_END
-        { $$ = create_begin_rescue($2, NULL, $4); }
+    : KW_BEGIN ENDL stmt_list KW_END
+        { $$ = create_begin_rescue($3, NULL, NULL); }
+    | KW_BEGIN ENDL stmt_list KW_RESCUE ENDL stmt_list KW_END
+        { $$ = create_begin_rescue($3, $6, NULL); }
+    | KW_BEGIN ENDL stmt_list KW_RESCUE ENDL stmt_list KW_ENSURE ENDL stmt_list KW_END
+        { $$ = create_begin_rescue($3, $6, $9); }
+    | KW_BEGIN ENDL stmt_list KW_ENSURE ENDL stmt_list KW_END
+        { $$ = create_begin_rescue($3, NULL, $6); }
     ;
-
 
 // EXPRESSIONS
 expr
@@ -327,10 +314,10 @@ expr_list
 
 // BLOCKS
 block
-    : KW_DO stmt_list KW_END
-        { $$ = create_block(NULL, $2, 0); }
-    | KW_DO block_params stmt_list KW_END
-        { $$ = create_block($2, $3, 0); }
+    : KW_DO ENDL stmt_list KW_END
+        { $$ = create_block(NULL, $3, 0); }
+    | KW_DO block_params ENDL stmt_list KW_END
+        { $$ = create_block($2, $4, 0); }
     | '{' stmt_list '}'
         { $$ = create_block(NULL, $2, 1); }
     | '{' block_params stmt_list '}'
@@ -384,15 +371,6 @@ static const char *printOp(OpCode op) {
         case OPC_MINUS_ASSIGN: return "-=";
         case OPC_MUL_ASSIGN: return "*=";
         case OPC_DIV_ASSIGN: return "/=";
-        default: return "?";
-    }
-}
-
-static const char *printKindStr(int kind) {
-    switch (kind) {
-        case PRINT_PUTS: return "puts";
-        case PRINT_PRINT: return "print";
-        case PRINT_P: return "p";
         default: return "?";
     }
 }
@@ -490,11 +468,8 @@ static void printNode(FILE *out, Node *n, int depth) {
         NHash *h = (NHash *)n;
         int i;
         fprintf(out, "<hash count=\"%d\">\n", h->count);
-        for (i = 0; i < h->count; i++) {
-            printNode(out, h->pairs[i], depth + 1);
-        }
-        printIndent(out, depth);
-        fprintf(out, "</hash>\n");
+        for (i = 0; i < h->count; i++) printNode(out, h->pairs[i], depth + 1);
+        printIndent(out, depth); fprintf(out, "</hash>\n");
         break;
     }
     case N_HASH_PAIR: {
@@ -554,13 +529,6 @@ static void printNode(FILE *out, Node *n, int depth) {
     }
     case N_BREAK: fprintf(out, "<break/>\n"); break;
     case N_NEXT: fprintf(out, "<next/>\n"); break;
-    case N_PRINT: {
-        NPrint *p = (NPrint *)n;
-        fprintf(out, "<print kind=\"%s\">\n", printKindStr(p->kind));
-        printNode(out, p->expr, depth + 1);
-        printIndent(out, depth); fprintf(out, "</print>\n");
-        break;
-    }
     case N_IF: {
         NIf *i = (NIf *)n;
         fprintf(out, "<if>\n");
