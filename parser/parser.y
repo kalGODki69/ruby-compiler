@@ -16,7 +16,7 @@ Node *g_root = NULL;
 %locations
 %define parse.error verbose
 %defines
-%expect 67
+%expect 66
 
 // YYSTYPE
 %union {
@@ -351,7 +351,6 @@ block
 
 block_params
     : '|' '|'                       { $$ = create_block_params_empty(); }
-    | '|' ID '|'                    { $$ = create_block_params_single($2); }
     | '|' param_list '|'            { $$ = $2; }
     ;
 
