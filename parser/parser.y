@@ -302,12 +302,12 @@ array_literal
 // HASHES
 hash_literal
     : '{' '}'                       { $$ = create_hash(NULL, 0); }
-    | '{' hash_pairs '}'            { $$ = create_hash(NULL, 0); }
+    | '{' hash_pairs '}'            { $$ = $2; }
     ;
 
 hash_pairs
-    : hash_pair                     { $$ = $1; }
-    | hash_pairs ',' hash_pair      { $$ = $1; }
+    : hash_pair                     { $$ = create_hash_list_single($1); }
+    | hash_pairs ',' hash_pair      { $$ = create_hash_list_append($1, $3); }
     ;
 
 hash_pair
@@ -494,7 +494,17 @@ static void printNode(FILE *out, Node *n, int depth) {
         break;
     }
     case N_ARRAY: fprintf(out, "<array count=\"%d\"/>\n", ((NArray *)n)->count); break;
-    case N_HASH: fprintf(out, "<hash/>\n"); break;
+    case N_HASH: {
+        NHash *h = (NHash *)n;
+        int i;
+        fprintf(out, "<hash count=\"%d\">\n", h->count);
+        for (i = 0; i < h->count; i++) {
+            printNode(out, h->pairs[i], depth + 1);
+        }
+        printIndent(out, depth);
+        fprintf(out, "</hash>\n");
+        break;
+    }
     case N_HASH_PAIR: {
         NHashPair *hp = (NHashPair *)n;
         fprintf(out, "<hash_pair>\n");

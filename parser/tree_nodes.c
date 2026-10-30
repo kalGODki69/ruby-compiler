@@ -183,6 +183,19 @@ Node *create_hash_pair(Node *key, Node *value) {
     return (Node *)n;
 }
 
+Node *create_hash_list_single(Node *pair) {
+    Node **pairs = (Node **)xmalloc(sizeof(Node *));
+    pairs[0] = pair;
+    return create_hash(pairs, 1);
+}
+
+Node *create_hash_list_append(Node *hash, Node *pair) {
+    NHash *n = (NHash *)hash;
+    n->pairs = (Node **)realloc(n->pairs, (n->count + 1) * sizeof(Node *));
+    n->pairs[n->count++] = pair;
+    return hash;
+}
+
 Node *create_index(Node *object, Node *index) {
     NIndex *n = (NIndex *)xmalloc(sizeof(NIndex));
     n->base.type = N_INDEX;

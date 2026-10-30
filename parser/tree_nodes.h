@@ -118,7 +118,7 @@ typedef struct {
 } NHash;
 
 typedef struct {
-    Node  base;
+    Node base;
     Node *key;
     Node *value;
 } NHashPair;
@@ -274,6 +274,8 @@ Node *create_assign(OpCode op, Node *target, Node *value);
 Node *create_range(int inclusive, Node *from, Node *to);
 Node *create_array(Node **items, int count);
 Node *create_hash(Node **pairs, int count);
+Node *create_hash_list_single(Node *pair);
+Node *create_hash_list_append(Node *hash, Node *pair);
 Node *create_hash_pair(Node *key, Node *value);
 Node *create_index(Node *object, Node *index);
 Node *create_call(Node *receiver, char *method, Node *args, Node *block, int scope_op);
