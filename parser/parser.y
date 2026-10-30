@@ -16,7 +16,7 @@ Node *g_root = NULL;
 %locations
 %define parse.error verbose
 %defines
-%expect 66
+%expect 67
 
 // YYSTYPE - union of all semantic value types
 %union {
@@ -324,6 +324,8 @@ call_expr
     | expr '.' ID '(' expr_list ')' { $$ = create_call($1, $3, $5, NULL, 0); }
     | expr '.' ID block             { $$ = create_call($1, $3, NULL, $4, 0); }
     | expr OP_SCOPE ID              { $$ = create_call($1, $3, NULL, NULL, 1); }
+    | expr OP_SCOPE ID '(' ')'      { $$ = create_call($1, $3, NULL, NULL, 1); }
+    | expr OP_SCOPE ID '(' expr_list ')' { $$ = create_call($1, $3, $5, NULL, 1); }
     ;
 
 expr_list
