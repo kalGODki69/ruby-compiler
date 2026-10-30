@@ -106,7 +106,7 @@ stmt_list
     : /* empty */                   { $$ = create_stmt_list_empty(); }
     | stmt                          { $$ = create_stmt_list_single($1); }
     | stmt_list ENDL stmt           { $$ = create_stmt_list_append($1, $3); }
-    | stmt_list ENDL                { $$ = $1; }  /* <-- съедаем ENDL в конце */
+    | stmt_list ENDL                { $$ = $1; }
     ;
 
 stmt
@@ -331,12 +331,9 @@ block_params
 
 %%
 
-// TREE PRINTER
+// TREE PRINTER (DOT FORMAT)
 
-static void printIndent(FILE *out, int depth) {
-    int i;
-    for (i = 0; i < depth; i++) fprintf(out, "  ");
-}
+static int node_id_counter = 0;
 
 static const char *printOp(OpCode op) {
     switch (op) {
@@ -386,255 +383,200 @@ static const char *printIdType(NodeType t) {
     }
 }
 
-static void printNode(FILE *out, Node *n, int depth);
+static int printDotNode(FILE *out, Node *n, int parent_id) {
+    if (!n) return -1;
 
-static void printStmtList(FILE *out, Node *n, int depth) {
-    NStmtList *sl = (NStmtList *)n;
-    int i;
-    printIndent(out, depth);
-    fprintf(out, "<stmt_list count=\"%d\">\n", sl->count);
-    for (i = 0; i < sl->count; i++) {
-        printNode(out, sl->stmts[i], depth + 1);
-    }
-    printIndent(out, depth);
-    fprintf(out, "</stmt_list>\n");
-}
-
-static void printNode(FILE *out, Node *n, int depth) {
-    if (!n) return;
-    printIndent(out, depth);
-
+    int my_id = node_id_counter++;
+    
     switch (n->type) {
     case N_INT:
-        fprintf(out, "<int value=\"%d\"/>\n", ((NInt *)n)->value); break;
+        fprintf(out, "    node%d [label=\"int %d\"];\n", my_id, ((NInt *)n)->value); break;
     case N_FLOAT:
-        fprintf(out, "<float value=\"%f\"/>\n", ((NFloat *)n)->value); break;
+        fprintf(out, "    node%d [label=\"float %f\"];\n", my_id, ((NFloat *)n)->value); break;
     case N_STRING:
-        fprintf(out, "<string value=\"%s\"/>\n", ((NString *)n)->value); break;
+        fprintf(out, "    node%d [label=\"string '%s'\"];\n", my_id, ((NString *)n)->value); break;
     case N_SYMBOL:
-        fprintf(out, "<symbol value=\"%s\"/>\n", ((NSymbol *)n)->value); break;
-    case N_TRUE:
-        fprintf(out, "<true/>\n"); break;
-    case N_FALSE:
-        fprintf(out, "<false/>\n"); break;
-    case N_NIL:
-        fprintf(out, "<nil/>\n"); break;
-    case N_SELF:
-        fprintf(out, "<self/>\n"); break;
+        fprintf(out, "    node%d [label=\"symbol :%s\"];\n", my_id, ((NSymbol *)n)->value); break;
+    case N_TRUE: fprintf(out, "    node%d [label=\"true\"];\n", my_id); break;
+    case N_FALSE: fprintf(out, "    node%d [label=\"false\"];\n", my_id); break;
+    case N_NIL: fprintf(out, "    node%d [label=\"nil\"];\n", my_id); break;
+    case N_SELF: fprintf(out, "    node%d [label=\"self\"];\n", my_id); break;
     case N_ID: case N_IVAR: case N_CVAR: case N_GVAR: case N_CONSTANT:
-        fprintf(out, "<%s name=\"%s\"/>\n", printIdType(n->type), ((NId *)n)->name); break;
+        fprintf(out, "    node%d [label=\"%s %s\"];\n", my_id, printIdType(n->type), ((NId *)n)->name); break;
+    case N_BINOP:
+        fprintf(out, "    node%d [label=\"binop %s\"];\n", my_id, printOp(((NBinOp *)n)->op)); break;
+    case N_UNOP:
+        fprintf(out, "    node%d [label=\"unop %s\"];\n", my_id, printOp(((NUnOp *)n)->op)); break;
+    case N_ASSIGN:
+        fprintf(out, "    node%d [label=\"assign %s\"];\n", my_id, printOp(((NAssign *)n)->op)); break;
+    case N_TERNARY: fprintf(out, "    node%d [label=\"ternary ?:\"];\n", my_id); break;
+    case N_RANGE:
+        fprintf(out, "    node%d [label=\"range %s\"];\n", my_id, ((NRange *)n)->inclusive ? ".." : "..."); break;
+    case N_ARRAY: fprintf(out, "    node%d [label=\"array\"];\n", my_id); break;
+    case N_HASH: fprintf(out, "    node%d [label=\"hash\"];\n", my_id); break;
+    case N_HASH_PAIR: fprintf(out, "    node%d [label=\"pair =>\"];\n", my_id); break;
+    case N_INDEX: fprintf(out, "    node%d [label=\"index []\"];\n", my_id); break;
+    case N_CALL:
+        fprintf(out, "    node%d [label=\"call %s %s\"];\n", my_id, ((NCall *)n)->scope_op ? "::" : ".", ((NCall *)n)->method); break;
+    case N_BLOCK: fprintf(out, "    node%d [label=\"block\"];\n", my_id); break;
+    case N_BLOCK_PARAMS: fprintf(out, "    node%d [label=\"params\"];\n", my_id); break;
+    case N_STMT_LIST: fprintf(out, "    node%d [label=\"stmt_list\"];\n", my_id); break;
+    case N_RETURN: fprintf(out, "    node%d [label=\"return\"];\n", my_id); break;
+    case N_BREAK: fprintf(out, "    node%d [label=\"break\"];\n", my_id); break;
+    case N_NEXT: fprintf(out, "    node%d [label=\"next\"];\n", my_id); break;
+    case N_IF: fprintf(out, "    node%d [label=\"if\"];\n", my_id); break;
+    case N_UNLESS: fprintf(out, "    node%d [label=\"unless\"];\n", my_id); break;
+    case N_WHILE: fprintf(out, "    node%d [label=\"while\"];\n", my_id); break;
+    case N_UNTIL: fprintf(out, "    node%d [label=\"until\"];\n", my_id); break;
+    case N_FOR: fprintf(out, "    node%d [label=\"for %s\"];\n", my_id, ((NFor *)n)->var); break;
+    case N_DEF: fprintf(out, "    node%d [label=\"def %s\"];\n", my_id, ((NDef *)n)->name); break;
+    case N_PARAM_LIST: fprintf(out, "    node%d [label=\"param_list\"];\n", my_id); break;
+    case N_CLASS: 
+        if (((NClass *)n)->parent) fprintf(out, "    node%d [label=\"class %s < %s\"];\n", my_id, ((NClass *)n)->name, ((NClass *)n)->parent);
+        else fprintf(out, "    node%d [label=\"class %s\"];\n", my_id, ((NClass *)n)->name); break;
+    case N_MODULE: fprintf(out, "    node%d [label=\"module %s\"];\n", my_id, ((NModule *)n)->name); break;
+    case N_BEGIN_RESCUE: fprintf(out, "    node%d [label=\"begin_rescue\"];\n", my_id); break;
+    case N_ELSIF: fprintf(out, "    node%d [label=\"elsif\"];\n", my_id); break;
+    case N_ARG_LIST: fprintf(out, "    node%d [label=\"args\"];\n", my_id); break;
+    default: fprintf(out, "    node%d [label=\"unknown\"];\n", my_id); break;
+    }
+
+    if (parent_id != -1) {
+        fprintf(out, "    node%d -> node%d;\n", parent_id, my_id);
+    }
+
+    switch (n->type) {
     case N_BINOP: {
         NBinOp *b = (NBinOp *)n;
-        fprintf(out, "<binop op=\"%s\">\n", printOp(b->op));
-        printNode(out, b->lhs, depth + 1);
-        printNode(out, b->rhs, depth + 1);
-        printIndent(out, depth); fprintf(out, "</binop>\n");
+        printDotNode(out, b->lhs, my_id);
+        printDotNode(out, b->rhs, my_id);
         break;
     }
-    case N_UNOP: {
-        NUnOp *u = (NUnOp *)n;
-        fprintf(out, "<unop op=\"%s\">\n", printOp(u->op));
-        printNode(out, u->operand, depth + 1);
-        printIndent(out, depth); fprintf(out, "</unop>\n");
-        break;
-    }
+    case N_UNOP: printDotNode(out, ((NUnOp *)n)->operand, my_id); break;
     case N_TERNARY: {
         NTernary *t = (NTernary *)n;
-        fprintf(out, "<ternary>\n");
-        printNode(out, t->cond, depth + 1);
-        printNode(out, t->then_expr, depth + 1);
-        printNode(out, t->else_expr, depth + 1);
-        printIndent(out, depth); fprintf(out, "</ternary>\n");
+        printDotNode(out, t->cond, my_id);
+        printDotNode(out, t->then_expr, my_id);
+        printDotNode(out, t->else_expr, my_id);
         break;
     }
     case N_ASSIGN: {
         NAssign *a = (NAssign *)n;
-        fprintf(out, "<assign op=\"%s\">\n", printOp(a->op));
-        printNode(out, a->target, depth + 1);
-        printNode(out, a->value, depth + 1);
-        printIndent(out, depth); fprintf(out, "</assign>\n");
+        printDotNode(out, a->target, my_id);
+        printDotNode(out, a->value, my_id);
         break;
     }
     case N_RANGE: {
         NRange *r = (NRange *)n;
-        fprintf(out, "<range type=\"%s\">\n", r->inclusive ? ".." : "...");
-        printNode(out, r->from, depth + 1);
-        printNode(out, r->to, depth + 1);
-        printIndent(out, depth); fprintf(out, "</range>\n");
+        printDotNode(out, r->from, my_id);
+        printDotNode(out, r->to, my_id);
         break;
     }
-    case N_ARRAY: fprintf(out, "<array count=\"%d\"/>\n", ((NArray *)n)->count); break;
     case N_HASH: {
-        NHash *h = (NHash *)n;
-        int i;
-        fprintf(out, "<hash count=\"%d\">\n", h->count);
-        for (i = 0; i < h->count; i++) printNode(out, h->pairs[i], depth + 1);
-        printIndent(out, depth); fprintf(out, "</hash>\n");
+        NHash *h = (NHash *)n; int i;
+        for (i = 0; i < h->count; i++) printDotNode(out, h->pairs[i], my_id);
         break;
     }
     case N_HASH_PAIR: {
         NHashPair *hp = (NHashPair *)n;
-        fprintf(out, "<hash_pair>\n");
-        printNode(out, hp->key, depth + 1);
-        printNode(out, hp->value, depth + 1);
-        printIndent(out, depth); fprintf(out, "</hash_pair>\n");
+        printDotNode(out, hp->key, my_id);
+        printDotNode(out, hp->value, my_id);
         break;
     }
     case N_INDEX: {
         NIndex *ix = (NIndex *)n;
-        fprintf(out, "<index>\n");
-        printNode(out, ix->object, depth + 1);
-        printNode(out, ix->index, depth + 1);
-        printIndent(out, depth); fprintf(out, "</index>\n");
+        printDotNode(out, ix->object, my_id);
+        printDotNode(out, ix->index, my_id);
         break;
     }
     case N_CALL: {
         NCall *c = (NCall *)n;
-        fprintf(out, "<call method=\"%s\" scope=\"%s\">\n", c->method, c->scope_op ? "::" : ".");
-        if (c->receiver) {
-            printIndent(out, depth + 1); fprintf(out, "<receiver>\n");
-            printNode(out, c->receiver, depth + 2);
-            printIndent(out, depth + 1); fprintf(out, "</receiver>\n");
-        }
-        if (c->args) {
-            printIndent(out, depth + 1); fprintf(out, "<args>\n");
-            printNode(out, c->args, depth + 2);
-            printIndent(out, depth + 1); fprintf(out, "</args>\n");
-        }
-        if (c->block) printNode(out, c->block, depth + 1);
-        printIndent(out, depth); fprintf(out, "</call>\n");
+        if (c->receiver) printDotNode(out, c->receiver, my_id);
+        if (c->args) printDotNode(out, c->args, my_id);
+        if (c->block) printDotNode(out, c->block, my_id);
         break;
     }
     case N_BLOCK: {
         NBlock *bl = (NBlock *)n;
-        fprintf(out, "<block braces=\"%d\">\n", bl->braces);
-        if (bl->params) printNode(out, bl->params, depth + 1);
-        if (bl->body) printNode(out, bl->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</block>\n");
+        if (bl->params) printDotNode(out, bl->params, my_id);
+        if (bl->body) printDotNode(out, bl->body, my_id);
         break;
     }
-    case N_BLOCK_PARAMS: {
-        NBlockParams *bp = (NBlockParams *)n; int i;
-        fprintf(out, "<block_params count=\"%d\">\n", bp->count);
-        for (i = 0; i < bp->count; i++) { printIndent(out, depth + 1); fprintf(out, "<param name=\"%s\"/>\n", bp->names[i]); }
-        printIndent(out, depth); fprintf(out, "</block_params>\n");
+    case N_STMT_LIST: {
+        NStmtList *sl = (NStmtList *)n; int i;
+        for (i = 0; i < sl->count; i++) printDotNode(out, sl->stmts[i], my_id);
         break;
     }
-    case N_STMT_LIST: printStmtList(out, n, depth); break;
-    case N_RETURN: {
-        NReturn *r = (NReturn *)n;
-        if (r->value) { fprintf(out, "<return>\n"); printNode(out, r->value, depth + 1); printIndent(out, depth); fprintf(out, "</return>\n"); }
-        else fprintf(out, "<return/>\n");
-        break;
-    }
-    case N_BREAK: fprintf(out, "<break/>\n"); break;
-    case N_NEXT: fprintf(out, "<next/>\n"); break;
+    case N_RETURN: if (((NReturn *)n)->value) printDotNode(out, ((NReturn *)n)->value, my_id); break;
     case N_IF: {
         NIf *i = (NIf *)n;
-        fprintf(out, "<if>\n");
-        printIndent(out, depth + 1); fprintf(out, "<cond>\n"); printNode(out, i->cond, depth + 2); printIndent(out, depth + 1); fprintf(out, "</cond>\n");
-        printIndent(out, depth + 1); fprintf(out, "<then>\n"); printNode(out, i->body, depth + 2); printIndent(out, depth + 1); fprintf(out, "</then>\n");
-        if (i->else_body) { printIndent(out, depth + 1); fprintf(out, "<else>\n"); printNode(out, i->else_body, depth + 2); printIndent(out, depth + 1); fprintf(out, "</else>\n"); }
-        printIndent(out, depth); fprintf(out, "</if>\n");
+        printDotNode(out, i->cond, my_id);
+        printDotNode(out, i->body, my_id);
+        if (i->else_body) printDotNode(out, i->else_body, my_id);
         break;
     }
     case N_UNLESS: {
         NUnless *u = (NUnless *)n;
-        fprintf(out, "<unless>\n");
-        printNode(out, u->cond, depth + 1);
-        printNode(out, u->body, depth + 1);
-        if (u->else_body) printNode(out, u->else_body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</unless>\n");
+        printDotNode(out, u->cond, my_id);
+        printDotNode(out, u->body, my_id);
+        if (u->else_body) printDotNode(out, u->else_body, my_id);
         break;
     }
     case N_WHILE: {
         NWhile *w = (NWhile *)n;
-        fprintf(out, "<while>\n");
-        printNode(out, w->cond, depth + 1);
-        printNode(out, w->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</while>\n");
+        printDotNode(out, w->cond, my_id);
+        printDotNode(out, w->body, my_id);
         break;
     }
     case N_UNTIL: {
         NUntil *u = (NUntil *)n;
-        fprintf(out, "<until>\n");
-        printNode(out, u->cond, depth + 1);
-        printNode(out, u->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</until>\n");
+        printDotNode(out, u->cond, my_id);
+        printDotNode(out, u->body, my_id);
         break;
     }
     case N_FOR: {
         NFor *f = (NFor *)n;
-        fprintf(out, "<for var=\"%s\">\n", f->var);
-        printNode(out, f->iterable, depth + 1);
-        printNode(out, f->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</for>\n");
+        printDotNode(out, f->iterable, my_id);
+        printDotNode(out, f->body, my_id);
         break;
     }
     case N_DEF: {
         NDef *d = (NDef *)n;
-        fprintf(out, "<def name=\"%s\">\n", d->name);
-        if (d->params) printNode(out, d->params, depth + 1);
-        if (d->body) printNode(out, d->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</def>\n");
+        if (d->params) printDotNode(out, d->params, my_id);
+        if (d->body) printDotNode(out, d->body, my_id);
         break;
     }
-    case N_PARAM_LIST: {
-        NParamList *pl = (NParamList *)n; int i;
-        fprintf(out, "<param_list count=\"%d\">\n", pl->count);
-        for (i = 0; i < pl->count; i++) { printIndent(out, depth + 1); fprintf(out, "<param name=\"%s\"/>\n", pl->names[i]); }
-        printIndent(out, depth); fprintf(out, "</param_list>\n");
-        break;
-    }
-    case N_CLASS: {
-        NClass *c = (NClass *)n;
-        fprintf(out, "<class name=\"%s\"", c->name);
-        if (c->parent) fprintf(out, " parent=\"%s\"", c->parent);
-        fprintf(out, ">\n");
-        if (c->body) printNode(out, c->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</class>\n");
-        break;
-    }
-    case N_MODULE: {
-        NModule *m = (NModule *)n;
-        fprintf(out, "<module name=\"%s\">\n", m->name);
-        if (m->body) printNode(out, m->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</module>\n");
-        break;
-    }
+    case N_CLASS: if (((NClass *)n)->body) printDotNode(out, ((NClass *)n)->body, my_id); break;
+    case N_MODULE: if (((NModule *)n)->body) printDotNode(out, ((NModule *)n)->body, my_id); break;
     case N_BEGIN_RESCUE: {
         NBeginRescue *br = (NBeginRescue *)n;
-        fprintf(out, "<begin_rescue>\n");
-        if (br->body) printNode(out, br->body, depth + 1);
-        if (br->rescue_body) printNode(out, br->rescue_body, depth + 1);
-        if (br->ensure_body) printNode(out, br->ensure_body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</begin_rescue>\n");
+        if (br->body) printDotNode(out, br->body, my_id);
+        if (br->rescue_body) printDotNode(out, br->rescue_body, my_id);
+        if (br->ensure_body) printDotNode(out, br->ensure_body, my_id);
         break;
     }
     case N_ELSIF: {
         NElsif *e = (NElsif *)n;
-        fprintf(out, "<elsif>\n");
-        printNode(out, e->cond, depth + 1);
-        printNode(out, e->body, depth + 1);
-        printIndent(out, depth); fprintf(out, "</elsif>\n");
+        printDotNode(out, e->cond, my_id);
+        printDotNode(out, e->body, my_id);
         break;
     }
     case N_ARG_LIST: {
         NArgList *al = (NArgList *)n; int i;
-        fprintf(out, "<arg_list count=\"%d\">\n", al->count);
-        for (i = 0; i < al->count; i++) printNode(out, al->items[i], depth + 1);
-        printIndent(out, depth); fprintf(out, "</arg_list>\n");
+        for (i = 0; i < al->count; i++) printDotNode(out, al->items[i], my_id);
         break;
     }
-    default: fprintf(out, "<unknown type=\"%d\"/>\n", n->type); break;
+    default: break;
     }
+
+    return my_id;
 }
 
 void printTree(FILE *out, Node *root) {
-    fprintf(out, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    fprintf(out, "<program>\n");
-    if (root) printNode(out, root, 1);
-    fprintf(out, "</program>\n");
+    node_id_counter = 0;
+    fprintf(out, "digraph AST {\n");
+    if (root) printDotNode(out, root, -1);
+    fprintf(out, "}\n");
 }
 
 // ERROR HANDLING
