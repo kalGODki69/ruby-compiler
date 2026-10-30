@@ -34,7 +34,8 @@ Node *g_root = NULL;
 %token KW_DEF KW_CLASS KW_MODULE
 %token KW_RETURN KW_YIELD
 %token KW_BREAK KW_NEXT
-%token KW_TRUE KW_FALSE KW_NIL
+%token <intval> BOOL
+%token KW_NIL
 %token KW_SELF KW_SUPER
 %token KW_AND KW_OR KW_NOT
 %token KW_BEGIN KW_RESCUE KW_ENSURE KW_RAISE
@@ -284,8 +285,7 @@ primary
     | CVAR                          { $$ = create_cvar($1); }
     | GVAR                          { $$ = create_gvar($1); }
     | CONSTANT                      { $$ = create_constant($1); }
-    | KW_TRUE                       { $$ = create_bool(1); }
-    | KW_FALSE                      { $$ = create_bool(0); }
+    | BOOL                          { $$ = create_bool($1); }
     | KW_NIL                        { $$ = create_nil(); }
     | KW_SELF                       { $$ = create_self(); }
     | array_literal                 { $$ = $1; }

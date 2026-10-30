@@ -67,8 +67,8 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 "yield"         { return KW_YIELD; }
 "break"         { return KW_BREAK; }
 "next"          { return KW_NEXT; }
-"true"          { return KW_TRUE; }
-"false"         { return KW_FALSE; }
+"true"          { yylval.intval = 1; return BOOL; }
+"false"         { yylval.intval = 0; return BOOL; }
 "nil"           { return KW_NIL; }
 "self"          { return KW_SELF; }
 "super"         { return KW_SUPER; }
