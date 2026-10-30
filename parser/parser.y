@@ -40,7 +40,6 @@ Node *g_root = NULL;
 %token KW_AND KW_OR KW_NOT
 %token KW_BEGIN KW_RESCUE KW_ENSURE KW_RAISE
 %token KW_CASE KW_WHEN KW_THEN
-%token KW_PUTS KW_PRINT KW_P
 
 // TERMINALS: LITERALS
 %token <intval>   INT
@@ -105,7 +104,7 @@ Node *g_root = NULL;
 %type <node> if_stmt elsif_list unless_stmt
 %type <node> while_stmt until_stmt for_stmt
 %type <node> def_stmt class_stmt module_stmt
-%type <node> begin_rescue print_stmt param_list
+%type <node> begin_rescue param_list
 
 %start program
 
@@ -136,7 +135,6 @@ stmt
     | class_stmt                    { $$ = $1; }
     | module_stmt                   { $$ = $1; }
     | begin_rescue                  { $$ = $1; }
-    | print_stmt                    { $$ = $1; }
     ;
 
 // IF
@@ -225,12 +223,6 @@ begin_rescue
         { $$ = create_begin_rescue($2, NULL, $4); }
     ;
 
-// PRINT
-print_stmt
-    : KW_PUTS '(' expr ')'          { $$ = create_print(PRINT_PUTS, $3); }
-    | KW_PRINT '(' expr ')'         { $$ = create_print(PRINT_PRINT, $3); }
-    | KW_P '(' expr ')'             { $$ = create_print(PRINT_P, $3); }
-    ;
 
 // EXPRESSIONS
 expr
