@@ -45,7 +45,6 @@ Node *g_root = NULL;
 %token <intval>   INT
 %token <floatval> FLOAT
 %token <strval>   STRING
-%token <strval>   STRING_SQ
 %token <strval>   SYMBOL
 %token <strval>   ID
 %token <strval>   IVAR
@@ -279,7 +278,6 @@ primary
     : INT                           { $$ = create_int($1); }
     | FLOAT                         { $$ = create_float($1); }
     | STRING                        { $$ = create_string($1); }
-    | STRING_SQ                     { $$ = create_string_sq($1); }
     | SYMBOL                        { $$ = create_symbol($1); }
     | ID                            { $$ = create_id($1); }
     | IVAR                          { $$ = create_ivar($1); }
@@ -441,8 +439,6 @@ static void printNode(FILE *out, Node *n, int depth) {
         fprintf(out, "<float value=\"%f\"/>\n", ((NFloat *)n)->value); break;
     case N_STRING:
         fprintf(out, "<string value=\"%s\"/>\n", ((NString *)n)->value); break;
-    case N_STRING_SQ:
-        fprintf(out, "<string_sq value=\"%s\"/>\n", ((NString *)n)->value); break;
     case N_SYMBOL:
         fprintf(out, "<symbol value=\"%s\"/>\n", ((NSymbol *)n)->value); break;
     case N_TRUE:

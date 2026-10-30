@@ -4,7 +4,6 @@
 #include <string.h>
 #include "parser.tab.h"
 
-
 char string_buf[4096];
 int  string_len = 0;
 
@@ -16,13 +15,11 @@ void reset_buf(void) {
     string_len = 0;
 }
 
-
 char *copy_string(const char *src) {
     char *dst = (char *) malloc(strlen(src) + 1);
     if (dst) strcpy(dst, src);
     return dst;
 }
-
 
 int cur_line = 1;
 int cur_col  = 1;
@@ -39,11 +36,9 @@ int cur_col  = 1;
 
 %option noyywrap
 
-
 %x DQSTRING
 %x SQSTRING
 %x COMMENT
-
 
 DIGIT       [0-9]
 INTEGER     {DIGIT}+
@@ -52,10 +47,8 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 
 %%
 
-
 {INTEGER}       { yylval.intval = atoi(yytext); return INT; }
 {FLOAT}         { yylval.floatval = atof(yytext); return FLOAT; }
-
 
 "if"            { return KW_IF; }
 "elsif"         { return KW_ELSIF; }
@@ -93,9 +86,7 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 "print"         { return KW_PRINT; }
 "p"             { return KW_P; }
 
-
 {ID}            { yylval.strval = copy_string(yytext); return ID; }
-
 
 "==="           { return OP_CASE_EQ; }
 "<=>"           { return OP_CMP; }
@@ -175,14 +166,14 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
     string_buf[string_len] = '\0';
     yylval.strval = copy_string(string_buf);
     BEGIN(INITIAL);
-    return STRING_SQ;
+    return STRING;
 }
 
 <SQSTRING>\n    {
     string_buf[string_len] = '\0';
     yylval.strval = copy_string(string_buf);
     BEGIN(INITIAL);
-    return STRING_SQ;
+    return STRING;
 }
 
 <SQSTRING>.     { append_char(yytext[0]); }
@@ -191,9 +182,7 @@ ID          [a-zA-Z_][a-zA-Z_0-9]*
 <COMMENT>\n     { BEGIN(INITIAL); }
 <COMMENT>.      { }
 
-
 [ \t\n]+        { }
-
 
 .               { return YYUNDEF; }
 
