@@ -305,6 +305,9 @@ call_expr
     | expr OP_SCOPE ID              { $$ = create_call($1, $3, NULL, NULL, 1); }
     | expr OP_SCOPE ID '(' ')'      { $$ = create_call($1, $3, NULL, NULL, 1); }
     | expr OP_SCOPE ID '(' expr_list ')' { $$ = create_call($1, $3, $5, NULL, 1); }
+    | expr OP_SCOPE CONSTANT        { $$ = create_call($1, $3, NULL, NULL, 1); }
+    | expr OP_SCOPE CONSTANT '(' ')' { $$ = create_call($1, $3, NULL, NULL, 1); }
+    | expr OP_SCOPE CONSTANT '(' expr_list ')' { $$ = create_call($1, $3, $5, NULL, 1); }
     ;
 
 expr_list
